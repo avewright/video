@@ -1,0 +1,70 @@
+# Core ML libraries
+torch>=2.1.0
+torchvision>=0.16.0
+torchaudio>=2.1.0
+transformers>=4.37.0
+accelerate>=0.26.0
+peft>=0.8.0
+bitsandbytes>=0.42.0
+datasets>=2.16.0
+tokenizers>=0.15.0
+
+# Qwen-specific dependencies
+qwen-vl-utils>=0.0.8
+einops>=0.7.0
+transformers_stream_generator>=0.0.4
+
+# Vision processing
+pillow>=10.0.0
+opencv-python>=4.8.0
+
+# Training utilities
+deepspeed>=0.12.0
+optimum>=1.16.0
+flash-attn>=2.5.0
+
+# Evaluation and metrics
+nltk>=3.8.0
+rouge-score>=0.1.2
+evaluate>=0.4.1
+sacrebleu>=2.4.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+jsonlines>=4.0.0
+pyarrow>=14.0.0
+
+# Visualization and monitoring
+matplotlib>=3.7.0
+seaborn>=0.12.0
+wandb>=0.16.0
+tensorboard>=2.15.0
+tqdm>=4.66.0
+
+# Web interface
+gradio>=4.15.0
+streamlit>=1.30.0
+
+# Utilities
+PyYAML>=6.0.1
+requests>=2.31.0
+huggingface_hub>=0.20.0
+safetensors>=0.4.1
+scipy>=1.11.0
+
+# Development tools
+jupyter>=1.0.0
+ipykernel>=6.29.0
+black>=23.12.0
+flake8>=7.0.0
+pytest>=7.4.0
+
+# Optional: For advanced OCR processing
+easyocr>=1.7.0
+paddlepaddle>=2.6.0
+paddleocr>=2.7.0
+
+# Performance optimization
+ninja>=1.11.1
+packaging>=23.2

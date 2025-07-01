@@ -1,0 +1,1 @@
+# Qwen2.5-VL Invoice OCR Fine-tuning Package 
