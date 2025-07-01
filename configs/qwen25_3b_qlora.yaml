@@ -1,4 +1,4 @@
-# Qwen2.5-VL 3B QLoRA Configuration for Invoice OCR-to-JSON
+# Qwen2.5-VL 3B QLoRA Configuration for Pure Vision-based Invoice Data Extraction
 # Optimized for single GPU with 18GB+ VRAM
 
 model:
@@ -38,7 +38,7 @@ training:
   per_device_train_batch_size: 1
   per_device_eval_batch_size: 1
   gradient_accumulation_steps: 8
-  dataloader_num_workers: 4
+  dataloader_num_workers: 0
   
   # Learning rate and scheduling
   learning_rate: 2.0e-4
@@ -76,16 +76,16 @@ training:
   
   # Logging
   logging_strategy: "steps"
-  logging_steps: 10
-  report_to: ["tensorboard", "wandb"]
+  logging_steps: 5  # More frequent logging for detailed loss tracking
+  report_to: ["tensorboard"]
   
-  # DeepSpeed ZeRO-2 for QLoRA
-  deepspeed: "configs/deepspeed_zero2.json"
+  # DeepSpeed ZeRO-2 for QLoRA (disabled for single GPU)
+  # deepspeed: "configs/deepspeed_zero2.json"
 
 dataset:
   name: "mychen76/invoices-and-receipts_ocr_v1"
   train_split: "train"
-  validation_split: "validation"
+  validation_split: "valid"
   test_split: "test"
   
   # Data preprocessing
@@ -98,10 +98,7 @@ dataset:
   # Instruction formatting
   instruction_template: |
     You are an expert at extracting structured data from receipts and invoices. 
-    Convert the following OCR text with bounding boxes into a well-formatted JSON object.
-    Extract all relevant information including company details, items, prices, totals, and dates.
-    
-    OCR Input: {ocr_text}
+    Analyze the image and return in JSON format all metadata seen including company details, items, prices, totals, and dates.
     
     Expected JSON format:
     {{
@@ -121,12 +118,6 @@ dataset:
     }}
     
     JSON Output:
-
-wandb:
-  project: "qwen25-vl-invoice-ocr"
-  name: "qwen25-3b-qlora-v1"
-  tags: ["qwen25-vl", "invoice-ocr", "qlora", "3b"]
-  notes: "QLoRA fine-tuning of Qwen2.5-VL 3B on invoice OCR dataset"
 
 # Computational settings
 device: "cuda"

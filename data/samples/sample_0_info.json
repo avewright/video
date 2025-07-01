@@ -1,0 +1,15 @@
+{
+  "index": 0,
+  "keys": [
+    "image",
+    "id",
+    "parsed_data",
+    "raw_data"
+  ],
+  "example_structure": {
+    "image": "JpegImageFile",
+    "id": "str",
+    "parsed_data": "str",
+    "raw_data": "str"
+  }
+}

@@ -5,7 +5,6 @@ Supports both full fine-tuning and QLoRA training modes.
 
 Usage:
     python train.py --config configs/qwen25_3b_qlora.yaml
-    python train.py --config configs/qwen25_3b_config.yaml --wandb_project my-project
 """
 
 import argparse
@@ -19,12 +18,11 @@ from typing import Any, Dict, List, Optional, Union
 
 import torch
 import yaml
-import wandb
 from accelerate import Accelerator
 from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from transformers import (
-    AutoModelForCausalLM,
+    AutoModelForVision2Seq,
     AutoProcessor,
     BitsAndBytesConfig,
     EarlyStoppingCallback,
@@ -125,11 +123,24 @@ class InvoiceOCRDataset:
         
         # Extract components
         image = example.get("image")
-        ocr_text = example.get("ocr_text", "")
-        target_json = example.get("structured_output", {})
         
-        # Format instruction
-        instruction = self.instruction_template.format(ocr_text=ocr_text)
+        # Parse the actual dataset format
+        parsed_data_str = example.get("parsed_data", "{}")
+        try:
+            parsed_data = json.loads(parsed_data_str)
+            json_str = parsed_data.get("json", "{}")
+            # The JSON is stored as a Python string representation, need to evaluate it safely
+            import ast
+            dataset_json = ast.literal_eval(json_str)
+        except (json.JSONDecodeError, ValueError, SyntaxError) as e:
+            logger.warning(f"Failed to parse dataset JSON: {e}")
+            dataset_json = {}
+        
+        # Convert dataset format to instruction template format
+        target_json = self.convert_dataset_to_template_format(dataset_json)
+        
+        # Format instruction (no OCR text needed - pure vision-based)
+        instruction = self.instruction_template
         
         # Create conversation format
         conversation = [
@@ -153,6 +164,49 @@ class InvoiceOCRDataset:
             "image": image,
             "target": json.dumps(target_json, indent=2)
         }
+    
+    def convert_dataset_to_template_format(self, dataset_json):
+        """Convert dataset format {header, items, summary} to template format."""
+        if not dataset_json:
+            return {}
+            
+        header = dataset_json.get("header", {})
+        items = dataset_json.get("items", [])
+        summary = dataset_json.get("summary", {})
+        
+        # Extract company info from seller field (first 2-3 words)
+        seller = header.get("seller", "")
+        company_parts = seller.split()
+        if len(company_parts) >= 2:
+            # Take first 2-3 words as company name
+            company = " ".join(company_parts[:3])
+        else:
+            company = seller
+            
+        # Convert items to expected format with new field names
+        converted_items = []
+        for item in items:
+            converted_item = {
+                "description": item.get("item_desc", ""),
+                "quantity": item.get("item_qty", ""),
+                "unit_price": item.get("item_net_price", ""),
+                "line_total": item.get("item_net_worth", ""),
+                "vat_rate": item.get("item_vat", "")
+            }
+            converted_items.append(converted_item)
+        
+        # Build target format with new precise structure
+        target = {
+            "company": company,
+            "address": seller,  # Complete seller address
+            "date": header.get("invoice_date", ""),  # Keep MM/DD/YYYY format
+            "invoice_number": header.get("invoice_no", ""),
+            "total": summary.get("total_gross_worth", ""),  # Keep currency symbol
+            "tax": summary.get("total_vat", ""),  # Keep currency symbol
+            "items": converted_items
+        }
+        
+        return target
 
 
 def collate_fn(batch, processor, max_seq_length=2048):
@@ -184,7 +238,7 @@ def collate_fn(batch, processor, max_seq_length=2048):
         return_tensors="pt",
         padding=True,
         max_length=max_seq_length,
-        truncation=True
+        truncation=False  # Disable truncation to avoid image token mismatch
     )
     
     # Create labels for training
@@ -232,7 +286,7 @@ def setup_model_and_processor(config: Dict[str, Any]):
     
     # Load model
     logger.info(f"Loading model: {model_name}")
-    model = AutoModelForCausalLM.from_pretrained(
+    model = AutoModelForVision2Seq.from_pretrained(
         model_name,
         quantization_config=quantization_config,
         device_map="auto",
@@ -274,7 +328,7 @@ def setup_datasets(config: Dict[str, Any], processor):
     """Setup training and validation datasets."""
     
     dataset_config = config["dataset"]
-    instruction_template = dataset_config.get("instruction_template", "Convert the OCR text to JSON: {ocr_text}")
+    instruction_template = dataset_config.get("instruction_template", "Analyze this image and return in JSON format all metadata seen.")
     
     # Create datasets
     train_dataset = InvoiceOCRDataset(
@@ -326,7 +380,7 @@ def setup_training_args(config: Dict[str, Any]) -> TrainingArguments:
         max_steps=training_config.get("max_steps", -1),
         
         # Evaluation and saving
-        evaluation_strategy=training_config.get("evaluation_strategy", "steps"),
+        eval_strategy=training_config.get("evaluation_strategy", "steps"),
         eval_steps=training_config.get("eval_steps", 500),
         save_strategy=training_config.get("save_strategy", "steps"),
         save_steps=training_config.get("save_steps", 500),
@@ -366,8 +420,6 @@ def setup_training_args(config: Dict[str, Any]) -> TrainingArguments:
 def main():
     parser = argparse.ArgumentParser(description="Fine-tune Qwen2.5-VL on invoice OCR dataset")
     parser.add_argument("--config", type=str, required=True, help="Path to configuration file")
-    parser.add_argument("--wandb_project", type=str, help="Weights & Biases project name")
-    parser.add_argument("--wandb_name", type=str, help="Weights & Biases run name")
     parser.add_argument("--local_rank", type=int, default=-1, help="Local rank for distributed training")
     
     args = parser.parse_args()
@@ -377,17 +429,6 @@ def main():
     
     # Set seed for reproducibility
     set_seed(config.get("seed", 42))
-    
-    # Setup Weights & Biases if configured
-    wandb_config = config.get("wandb", {})
-    if wandb_config or args.wandb_project:
-        wandb.init(
-            project=args.wandb_project or wandb_config.get("project", "qwen25-vl-invoice"),
-            name=args.wandb_name or wandb_config.get("name"),
-            tags=wandb_config.get("tags", []),
-            notes=wandb_config.get("notes", ""),
-            config=config,
-        )
     
     # Setup model and processor
     model, processor = setup_model_and_processor(config)
@@ -400,7 +441,8 @@ def main():
     
     # Create custom collate function
     def data_collator(batch):
-        return collate_fn(batch, processor, training_args.model_max_length)
+        max_length = config.get("model", {}).get("model_max_length", 2048)
+        return collate_fn(batch, processor, max_length)
     
     # Setup trainer
     trainer = Trainer(
@@ -414,7 +456,9 @@ def main():
     
     # Start training
     logger.info("Starting training...")
-    if list(training_args.output_dir.glob("checkpoint-*")):
+    import pathlib
+    output_path = pathlib.Path(training_args.output_dir)
+    if list(output_path.glob("checkpoint-*")):
         logger.info("Resuming from checkpoint...")
         trainer.train(resume_from_checkpoint=True)
     else:
