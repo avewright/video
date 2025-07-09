@@ -179,6 +179,41 @@ async def health_check():
         "device": str(device) if device else "unknown"
     }
 
+@app.post("/inference/upload")
+async def inference_upload(
+    image: UploadFile = File(...),
+    prompt: str = Form(...),
+    max_new_tokens: int = Form(512)
+):
+    """Handle inference upload requests with the new API format."""
+    try:
+        # Read and process image
+        image_data = await image.read()
+        pil_image = Image.open(io.BytesIO(image_data)).convert('RGB')
+        
+        # Field extraction - return JSON response in the expected format
+        fields_result = extract_fields_simulation(pil_image)
+        
+        # Format response as JSON string with markdown
+        json_response = json.dumps(fields_result["extracted_fields"], indent=2)
+        
+        return JSONResponse(content={
+            "response": f"```json\n{json_response}\n```",
+            "success": True,
+            "error": None
+        })
+            
+    except Exception as e:
+        logger.error(f"Upload API error: {e}")
+        return JSONResponse(
+            content={
+                "response": f"```json\n{{}}\n```",
+                "success": False,
+                "error": str(e)
+            },
+            status_code=500
+        )
+
 @app.post("/inference")
 async def inference(
     image: UploadFile = File(...),

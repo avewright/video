@@ -32,7 +32,7 @@ function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [streamActive, setStreamActive] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  
+
   // Add frame counter for logging
   const frameCounter = useRef(0);
   const lastLogTime = useRef(Date.now());
@@ -223,16 +223,14 @@ function App() {
         // Create FormData for the request
         console.log('📝 Creating FormData...');
         const formData = new FormData();
-        formData.append('prompt', 'This is an industrial equipment nameplate. Extract technical specifications and return a complete JSON object with ALL of these fields (fill with actual values if visible, or null if not found): {"manufacturer": "value_or_null", "model": "value_or_null", "serial_number": "value_or_null", "voltage": "value_or_null", "power": "value_or_null", "frequency": "value_or_null", "current": "value_or_null", "year": "value_or_null", "type": "value_or_null", "part_number": "value_or_null", "rating": "value_or_null", "phase": "value_or_null"}. You MUST return ALL 12 fields in your response. Do NOT omit any fields. Response format: complete JSON object only.');
+        formData.append('prompt', 'Find all key and value pairs in this image (example: {name: "motor 3"}). Extract this information and return ONLY a valid json string.');
         formData.append('image', blob, 'nameplate.jpg');
-        formData.append('max_new_tokens', '384');
-        formData.append('temperature', '0.1');
+        formData.append('max_new_tokens', '512');
 
         console.log('📝 FormData created with:');
-        console.log('  - prompt: "This is an industrial equipment nameplate. Extract technical specifications and return a complete JSON object with ALL 12 fields..."');
+        console.log('  - prompt: "Find all key and value pairs in this image (example: {name: "motor 3"}). Extract this information and return ONLY a valid json string."');
         console.log('  - image: blob (', blob.size, 'bytes)');
-        console.log('  - max_new_tokens: "384"');
-        console.log('  - temperature: "0.1"');
+        console.log('  - max_new_tokens: "512"');
 
         // Log all FormData entries
         for (let pair of formData.entries()) {
@@ -243,10 +241,10 @@ function App() {
           }
         }
 
-        console.log('🚀 Making POST request to http://localhost:3001/api/inference (proxy route)');
+        console.log('🚀 Making POST request to http://localhost:8000/inference/upload (direct to model API)');
 
-        // Make the POST request through the Node.js proxy to avoid CORS issues
-        const response = await fetch('http://localhost:3001/api/inference', {
+        // Make the POST request directly to the model API
+        const response = await fetch('http://localhost:8000/inference/upload', {
           method: 'POST',
           headers: {
             'accept': 'application/json',
@@ -274,6 +272,12 @@ function App() {
         console.log('✅ API Response received:', result);
         console.log('📊 Response keys:', Object.keys(result));
         
+        // Handle the new response format with success flag
+        if (!result.success) {
+          console.error('❌ API returned error:', result.error);
+          throw new Error(`API Error: ${result.error}`);
+        }
+        
         // Handle the exact response schema from your API
         console.log('🔧 Setting extracted fields...');
         
@@ -291,46 +295,20 @@ function App() {
               cleanResponse = cleanResponse.replace(/```[^`]*/, '').replace(/```\s*$/, '');
             }
             
-                         // Find JSON object in the response with better regex
-             const jsonMatch = cleanResponse.match(/\{[\s\S]*?\}/);
-             if (jsonMatch) {
-               // Check if response contains invalid content before parsing
-               const responseText = jsonMatch[0].toLowerCase();
-               const invalidContent = ['hotdog', 'burger', 'food', 'price', 'total', '$', 'receipt', 'menu', 'restaurant', 'imagine', 'inspire', 'ignite', 'innovation', 'enabling', 'dolladolla'];
-               const hasInvalidContent = invalidContent.some(term => responseText.includes(term));
-               
-               if (hasInvalidContent) {
-                 console.warn('⚠️ Response contains invalid content (food/price data)');
-                 parsedResponse = { error: 'Response contains irrelevant content (food/prices)', raw_response: result.response };
-               } else {
-                 try {
-                   parsedResponse = JSON.parse(jsonMatch[0]);
-                   console.log('✅ Successfully parsed JSON response:', parsedResponse);
-                   
-                   // Validate that we have nameplate-like data
-                   const validKeys = ['manufacturer', 'model', 'serial_number', 'voltage', 'power', 'frequency', 'current', 'year', 'type', 'part_number', 'rating', 'phase'];
-                   const responseKeys = Object.keys(parsedResponse);
-                   const hasValidKeys = responseKeys.some(key => validKeys.includes(key.toLowerCase()));
-                   
-                   // Check if we have most of the expected fields (at least 8 out of 12)
-                   const expectedFieldCount = validKeys.length;
-                   const actualValidFields = responseKeys.filter(key => validKeys.includes(key.toLowerCase()));
-                   
-                   if (!hasValidKeys || actualValidFields.length < 8) {
-                     console.warn('⚠️ Response doesn\'t contain enough expected nameplate fields');
-                     console.warn('Expected fields:', validKeys);
-                     console.warn('Actual fields:', responseKeys);
-                     parsedResponse = { error: 'Incomplete nameplate data extracted', raw_response: result.response };
-                   }
-                 } catch (parseError) {
-                   console.warn('⚠️ JSON parsing failed:', parseError.message);
-                   parsedResponse = { error: 'Malformed JSON structure', raw_response: result.response };
-                 }
-               }
-             } else {
-               console.warn('⚠️ No JSON object found in response');
-               parsedResponse = { error: 'No valid JSON found', raw_response: result.response };
-             }
+            // Find JSON object in the response with better regex
+            const jsonMatch = cleanResponse.match(/\{[\s\S]*?\}/);
+            if (jsonMatch) {
+              try {
+                parsedResponse = JSON.parse(jsonMatch[0]);
+                console.log('✅ Successfully parsed JSON response:', parsedResponse);
+              } catch (parseError) {
+                console.warn('⚠️ JSON parsing failed:', parseError.message);
+                parsedResponse = { error: 'Malformed JSON structure', raw_response: result.response };
+              }
+            } else {
+              console.warn('⚠️ No JSON object found in response');
+              parsedResponse = { error: 'No valid JSON found', raw_response: result.response };
+            }
           }
         } catch (e) {
           console.error('❌ Failed to parse JSON response:', e);
@@ -339,10 +317,9 @@ function App() {
         
         setExtractedFields({
           response: parsedResponse,
-          prompt: result.prompt,
-          has_image: result.has_image,
-          max_new_tokens: result.max_new_tokens,
-          temperature: result.temperature
+          raw_response: result.response,
+          success: result.success,
+          error: result.error
         });
         console.log('✅ Extracted fields set successfully');
 

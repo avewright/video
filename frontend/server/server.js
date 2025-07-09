@@ -138,7 +138,7 @@ app.post('/api/inference', upload.single('image'), async (req, res) => {
     logToFile('INFO', '🔄 Proxying request to inference API...');
     logToFile('INFO', `📤 Request parameters: ${JSON.stringify({ prompt, max_new_tokens, temperature })}`);
     
-    const response = await axios.post('http://localhost:8000/inference', formData, {
+    const response = await axios.post('http://localhost:8000/inference/upload', formData, {
       headers: formData.getHeaders(),
       timeout: 30000  // 30 second timeout
     });
@@ -316,13 +316,12 @@ async function extractFieldsFromImage(imageData, socket) {
     // Create form data for the inference endpoint
     const formData = new FormData();
     formData.append('image', imageBuffer, 'nameplate.jpg');
-    formData.append('prompt', 'Extract all key-value pairs from this nameplate image and return them in JSON format. Include information like model numbers, serial numbers, voltage, current, power, manufacturer, and any other technical specifications visible.');
+    formData.append('prompt', 'Find all key and value pairs in this image (example: {name: "motor 3"}). Extract this information and return ONLY a valid json string.');
     formData.append('max_new_tokens', '512');
-    formData.append('temperature', '0.7');
     
     logToFile('INFO', '📤 Sending image to inference endpoint for field extraction...');
     
-    const response = await axios.post('http://localhost:8000/inference', formData, {
+    const response = await axios.post('http://localhost:8000/inference/upload', formData, {
       headers: formData.getHeaders(),
       timeout: 30000
     });
@@ -349,7 +348,7 @@ async function extractFieldsFromImage(imageData, socket) {
 // REST API endpoints
 app.post('/api/extract-fields', upload.single('image'), async (req, res) => {
   try {
-    const { prompt = 'Extract all key-value pairs from this nameplate image and return them in JSON format.' } = req.body;
+    const { prompt = 'Find all key and value pairs in this image (example: {name: "motor 3"}). Extract this information and return ONLY a valid json string.' } = req.body;
     
     logToFile('INFO', '📝 Field extraction API request received');
     
@@ -362,9 +361,8 @@ app.post('/api/extract-fields', upload.single('image'), async (req, res) => {
     formData.append('image', req.file.buffer, 'nameplate.jpg');
     formData.append('prompt', prompt);
     formData.append('max_new_tokens', '512');
-    formData.append('temperature', '0.7');
     
-    const response = await axios.post('http://localhost:8000/inference', formData, {
+    const response = await axios.post('http://localhost:8000/inference/upload', formData, {
       headers: formData.getHeaders(),
       timeout: 30000
     });
