@@ -1,0 +1,132 @@
+version: '3.8'
+
+services:
+  # API Service
+  nameplate-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: nameplate-api
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_PATH=/app/models/best_nameplate_classifier.pth
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./models:/app/models:ro
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Frontend Backend Service
+  nameplate-backend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nameplate-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - API_URL=http://nameplate-api:8000
+      - PORT=3001
+    depends_on:
+      - nameplate-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Frontend Service
+  nameplate-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: nameplate-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=http://localhost:3001
+    depends_on:
+      - nameplate-backend
+    restart: unless-stopped
+
+  # Development Service (for development only)
+  nameplate-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: nameplate-dev
+    ports:
+      - "8000:8000"
+      - "3000:3000"
+      - "3001:3001"
+    environment:
+      - MODEL_PATH=/app/models/best_nameplate_classifier.pth
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - .:/app
+      - ./models:/app/models:ro
+      - ./logs:/app/logs
+    profiles:
+      - dev
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  # Redis (for caching and session management)
+  redis:
+    image: redis:7-alpine
+    container_name: nameplate-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Nginx (reverse proxy)
+  nginx:
+    image: nginx:alpine
+    container_name: nameplate-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - nameplate-frontend
+      - nameplate-backend
+      - nameplate-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+networks:
+  default:
+    name: nameplate-network 

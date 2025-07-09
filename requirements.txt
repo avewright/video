@@ -1,69 +1,96 @@
 # Core ML libraries
-torch>=2.1.0
-torchvision>=0.16.0
-torchaudio>=2.1.0
-transformers>=4.37.0
-accelerate>=0.26.0
-peft>=0.8.0
-bitsandbytes>=0.42.0
-datasets>=2.16.0
-tokenizers>=0.15.0
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.30.0
 
-# Qwen-specific dependencies
-qwen-vl-utils>=0.0.8
-einops>=0.7.0
-transformers_stream_generator>=0.0.4
+# Dataset and model hub
+datasets>=2.12.0
+huggingface_hub>=0.15.0
 
-# Vision processing
-pillow>=10.0.0
-opencv-python>=4.8.0
+# Image processing
+Pillow>=9.5.0
+opencv-python>=4.8.0  # For camera streaming and real-time detection
 
-# Training utilities
-deepspeed>=0.12.0
-optimum>=1.16.0
-
-# Evaluation and metrics
-nltk>=3.8.0
-rouge-score>=0.1.2
-evaluate>=0.4.1
-sacrebleu>=2.4.0
-
-# Data processing
-pandas>=2.0.0
+# Scientific computing
 numpy>=1.24.0
-jsonlines>=4.0.0
-pyarrow>=14.0.0
+pandas>=2.0.0
 
-# Visualization and monitoring
+# Visualization
 matplotlib>=3.7.0
-seaborn>=0.12.0
-wandb>=0.16.0
-tensorboard>=2.15.0
-tqdm>=4.66.0
 
-# Web interface
-gradio>=4.15.0
-streamlit>=1.30.0
+# Progress bars and utilities
+tqdm>=4.65.0
 
-# Utilities
-PyYAML>=6.0.1
+# Jupyter notebook support
+ipywidgets>=8.0.0
+notebook>=6.5.0
+
+# Data augmentation
+albumentations>=1.3.0
+
+# YAML configuration
+PyYAML>=6.0
+
+# Validation and type checking
+pydantic>=1.10.0
+
+# Logging
+loguru>=0.7.0
+
+# System utilities
+psutil>=5.9.0
+
+# Additional computer vision
+scikit-image>=0.20.0
+
+# Model optimization
+onnx>=1.14.0
+onnxruntime>=1.15.0
+
+# Async support
+aiofiles>=23.0.0
+
+# Configuration management
+hydra-core>=1.3.0
+
+# Experiment tracking
+wandb>=0.15.0
+
+# Web interface (optional)
+gradio>=3.35.0
+streamlit>=1.24.0
+
+# HTTP requests
 requests>=2.31.0
-huggingface_hub>=0.20.0
-safetensors>=0.4.1
-scipy>=1.11.0
 
-# Development tools
-jupyter>=1.0.0
-ipykernel>=6.29.0
-black>=23.12.0
-flake8>=7.0.0
-pytest>=7.4.0
+# Audio processing (if needed)
+librosa>=0.10.0
 
-# Optional: For advanced OCR processing
-easyocr>=1.7.0
-paddlepaddle>=2.6.0
-paddleocr>=2.7.0
+# Advanced image processing
+opencv-contrib-python>=4.8.0  # Additional OpenCV modules
 
-# Performance optimization
-ninja>=1.11.1
-packaging>=23.2
+# Performance monitoring
+memory-profiler>=0.60.0
+
+# Testing
+pytest>=7.3.0
+pytest-cov>=4.1.0
+
+# Code quality
+black>=23.0.0
+flake8>=6.0.0
+isort>=5.12.0
+
+# Documentation
+sphinx>=7.0.0
+
+# Development utilities
+ipython>=8.14.0
+
+# Deployment
+fastapi>=0.100.0
+uvicorn>=0.23.0
+
+# Model conversion
+coremltools>=6.3.0
+tensorflow>=2.13.0  # For some conversion utilities

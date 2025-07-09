@@ -1,7 +1,0 @@
-{
-  "base_model": "Qwen/Qwen2.5-VL-3B-Instruct",
-  "adapter_path": "./outputs/qwen25-3b-qlora-invoice/checkpoint-100",
-  "training_method": "QLoRA",
-  "task": "invoice-ocr",
-  "merged_at": "None"
-}

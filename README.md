@@ -1,275 +1,203 @@
-# Qwen2.5-VL 3B Fine-tuning for Invoice/Receipt OCR-to-JSON
+# 🎥 Video Streaming Site with Nameplate Detection
 
-This repository provides a complete setup for fine-tuning Qwen2.5-VL 3B model on the `mychen76/invoices-and-receipts_ocr_v1` dataset to convert OCR text from invoices and receipts into structured JSON format.
+A real-time video streaming application that uses computer vision to detect and analyze industrial nameplates from live camera feeds.
 
 ## 🚀 Quick Start
 
-```bash
-# Clone the repository
-git clone <your-repo-url>
-cd qwen25-vl-invoice-ocr
+### Prerequisites
+- Python 3.8+
+- Node.js 14+
+- Camera (webcam or external)
+- Required Python packages (see requirements.txt)
 
-# Setup environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+### Installation
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Download and prepare the dataset
-python scripts/prepare_dataset.py
-
-# Start training
-python train.py --config configs/qwen25_3b_config.yaml
-```
-
-## 📋 Requirements
-
-- **GPU**: Minimum 18GB VRAM (RTX 4090, A100, etc.)
-- **Python**: 3.8+
-- **CUDA**: 11.8 or higher
-- **Memory**: 32GB+ RAM recommended
-
-## 📊 Dataset
-
-This project uses the `mychen76/invoices-and-receipts_ocr_v1` dataset, which contains:
-- Invoice and receipt images
-- OCR text with bounding boxes
-- Structured JSON outputs
-- Training for converting OCR results to structured data
-
-### Dataset Format
-The dataset follows this structure:
-```json
-{
-  "image": "path/to/image.jpg",
-  "ocr_text": "[[[[184.0, 42.0], [278.0, 45.0]], ('COMPANY NAME', 0.95)], ...]",
-  "structured_output": {
-    "company": "COMPANY NAME",
-    "total": "15.99",
-    "date": "2024-01-15",
-    "items": [...]
-  }
-}
-```
-
-## 🏗️ Repository Structure
-
-```
-qwen25-vl-invoice-ocr/
-├── configs/                 # Training configurations
-│   ├── qwen25_3b_config.yaml
-│   └── qwen25_3b_qlora.yaml
-├── data/                   # Dataset storage
-│   ├── raw/
-│   ├── processed/
-│   └── samples/
-├── scripts/                # Utility scripts
-│   ├── prepare_dataset.py
-│   ├── validate_setup.py
-│   └── convert_checkpoint.py
-├── src/                    # Source code
-│   ├── data/
-│   ├── models/
-│   ├── training/
-│   └── utils/
-├── notebooks/              # Jupyter notebooks
-│   ├── dataset_exploration.ipynb
-│   └── inference_demo.ipynb
-├── tests/                  # Test files
-├── train.py               # Main training script
-├── inference.py           # Inference script
-├── requirements.txt       # Dependencies
-└── README.md
-```
-
-## 🛠️ Installation
-
-### 1. Environment Setup
-
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate
-
-# Upgrade pip
-pip install --upgrade pip
-```
-
-### 2. Install Dependencies
-
-```bash
-# Install PyTorch with CUDA support
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-
-# Install other requirements
-pip install -r requirements.txt
-```
-
-### 3. Verify Installation
-
-```bash
-python scripts/validate_setup.py
-```
-
-## 🎯 Training
-
-### Basic Training
-
-```bash
-# Full fine-tuning (requires high VRAM)
-python train.py --config configs/qwen25_3b_config.yaml
-
-# QLoRA training (memory efficient)
-python train.py --config configs/qwen25_3b_qlora.yaml
-```
-
-### Custom Training
-
-```python
-from src.training.trainer import Qwen25VLTrainer
-
-trainer = Qwen25VLTrainer(
-    model_name="Qwen/Qwen2.5-VL-3B-Instruct",
-    dataset_name="mychen76/invoices-and-receipts_ocr_v1",
-    output_dir="./outputs",
-    batch_size=1,
-    learning_rate=2e-4,
-    num_epochs=3,
-    use_qlora=True
-)
-
-trainer.train()
-```
-
-## 🔍 Inference
-
-### Using the Fine-tuned Model
-
-```python
-from src.models.qwen_vl_model import QwenVLInvoiceModel
-
-model = QwenVLInvoiceModel.from_pretrained("./outputs/checkpoint-best")
-
-# Process an invoice image
-result = model.process_invoice(
-    image_path="data/samples/invoice.jpg",
-    ocr_text="extracted_ocr_text_here"
-)
-
-print(result)  # Structured JSON output
-```
-
-### Gradio Interface
-
-```bash
-# Launch interactive demo
-python inference.py --demo
-```
-
-## ⚙️ Configuration
-
-### Training Configuration (`configs/qwen25_3b_qlora.yaml`)
-
-```yaml
-model:
-  name: "Qwen/Qwen2.5-VL-3B-Instruct"
-  use_qlora: true
-  lora_rank: 8
-  lora_alpha: 16
-  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
-
-training:
-  batch_size: 1
-  gradient_accumulation_steps: 8
-  learning_rate: 2e-4
-  num_epochs: 3
-  warmup_steps: 100
-  max_seq_length: 2048
-
-dataset:
-  name: "mychen76/invoices-and-receipts_ocr_v1"
-  train_split: "train"
-  val_split: "validation"
-  preprocessing:
-    max_image_size: 1280
-    instruction_template: "Convert the following OCR text to structured JSON format:"
-```
-
-## 📈 Monitoring
-
-### Weights & Biases Integration
-
-```bash
-# Login to W&B
-wandb login
-
-# Train with logging
-python train.py --config configs/qwen25_3b_qlora.yaml --wandb_project qwen25-invoice-ocr
-```
-
-### TensorBoard
-
-```bash
-# Start TensorBoard
-tensorboard --logdir outputs/logs
-
-# View at http://localhost:6006
-```
-
-## 🧪 Evaluation
-
-```bash
-# Evaluate on test set
-python scripts/evaluate.py --checkpoint outputs/checkpoint-best --test_data data/test.json
-
-# Generate sample outputs
-python scripts/generate_samples.py --checkpoint outputs/checkpoint-best
-```
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-1. **CUDA Out of Memory**
+1. **Install Python dependencies:**
    ```bash
-   # Reduce batch size or use gradient checkpointing
-   python train.py --config configs/qwen25_3b_qlora.yaml --batch_size 1 --gradient_checkpointing
+   pip install -r requirements.txt
    ```
 
-2. **Dataset Loading Issues**
+2. **Setup frontend:**
    ```bash
-   # Re-download dataset
-   python scripts/prepare_dataset.py --force_download
+   cd frontend
+   npm install
+   cd server
+   npm install
    ```
 
-3. **Model Loading Errors**
+3. **Start the application:**
    ```bash
-   # Check model compatibility
-   python scripts/validate_setup.py --check_model
+   # Terminal 1: Start the model API
+   python api_server.py
+   
+   # Terminal 2: Start the backend server
+   cd frontend/server
+   npm start
+   
+   # Terminal 3: Start the frontend
+   cd frontend
+   npm start
    ```
+
+4. **Access the application:**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:3001
+   - Model API: http://localhost:8000
+
+## 🎯 Features
+
+### 📹 Real-time Video Streaming
+- Live camera feed processing
+- WebSocket-based real-time communication
+- Adjustable detection sensitivity
+- Auto-pause on detection
+
+### 🔍 Nameplate Detection
+- Industrial nameplate identification
+- Confidence scoring
+- Visual detection overlay
+- Detection history tracking
+
+### 📋 Field Extraction
+- Extract technical specifications from nameplates
+- Support for 12 standard fields:
+  - manufacturer, model, serial_number
+  - voltage, power, frequency, current
+  - year, type, part_number, rating, phase
+- JSON-formatted output
+- Error handling and validation
+
+### 🖥️ Web Interface
+- Modern React-based UI
+- Real-time detection visualization
+- Camera controls and settings
+- Download detected images
+- Detection statistics
+
+## 📁 Project Structure
+
+```
+video/
+├── 📂 frontend/                     # React web application
+│   ├── src/App.js                   # Main React component
+│   ├── server/server.js             # Node.js backend with Socket.io
+│   └── python-integration/          # Python service integration
+├── 📂 docs/                         # Documentation
+│   ├── CAMERA_DETECTION_README.md   # Camera setup guide
+│   ├── FIELD_EXTRACTION_README.md   # Field extraction guide
+│   └── FRONTEND_QUICKSTART.md       # Frontend setup guide
+├── 📂 data/samples/                 # Sample images and data
+├── 📂 notebooks/                    # Jupyter notebooks for demos
+├── 📂 src/                          # Core Python modules
+├── 🎯 Core Detection Scripts
+│   ├── api_server.py                # Main API server
+│   ├── inference.py                 # Model inference server
+│   ├── realtime_nameplate_detector.py  # Real-time detection
+│   ├── camera_detector_windows.py   # Windows-compatible detector
+│   ├── predict_nameplate.py         # Batch prediction
+│   ├── quickstart_camera.py         # Simple camera test
+│   └── test_field_extraction.py     # Field extraction testing
+├── 📄 requirements.txt              # Python dependencies
+├── 📄 README.md                     # This file
+└── 📄 LICENSE                       # MIT License
+```
+
+## 🛠️ Core Components
+
+### Detection System
+- **Real-time Detection**: Live camera feed processing with MobileNetV2
+- **Cross-platform**: Windows, macOS, Linux support
+- **Multiple Interfaces**: Web UI, desktop apps, command-line tools
+
+### Web Application
+- **React Frontend**: Modern, responsive interface
+- **Node.js Backend**: Express server with Socket.io
+- **Python Integration**: Seamless Python-Node.js communication
+- **WebSocket Communication**: Real-time updates
+
+### Model API
+- **Inference Server**: Fast model serving on port 8000
+- **Field Extraction**: AI-powered text extraction
+- **Batch Processing**: Support for multiple images
+- **JSON API**: RESTful endpoints
+
+## 🎮 Usage Examples
+
+### Web Interface
+```bash
+# Start all services
+npm run dev    # From frontend directory
+```
+
+### Command Line Detection
+```bash
+# Simple camera detection
+python quickstart_camera.py
+
+# Advanced detection with options
+python realtime_nameplate_detector.py --threshold 0.8
+
+# Windows-compatible version
+python camera_detector_windows.py
+```
+
+### Field Extraction
+```bash
+# Extract fields from an image
+python test_field_extraction.py --image path/to/nameplate.jpg
+```
+
+### API Usage
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Extract fields
+curl -X POST http://localhost:8000/inference \
+  -F "image=@nameplate.jpg" \
+  -F "prompt=Extract nameplate fields" \
+  -F "max_new_tokens=200"
+```
+
+## 🔧 Configuration
+
+### Detection Settings
+- **Confidence Threshold**: Adjust detection sensitivity (0.1-1.0)
+- **Camera Selection**: Choose camera device (0, 1, 2...)
+- **Processing Device**: CPU or GPU acceleration
+
+### Web Interface Settings
+- **Auto-pause**: Automatically pause on detection
+- **Overlay Display**: Show/hide detection overlay
+- **Download Quality**: Image save quality settings
+
+## 📚 Documentation
+
+Detailed guides available in the `docs/` directory:
+
+- **[Camera Detection](docs/CAMERA_DETECTION_README.md)**: Setup and usage
+- **[Field Extraction](docs/FIELD_EXTRACTION_README.md)**: Text extraction from nameplates
+- **[Frontend Guide](docs/FRONTEND_QUICKSTART.md)**: Web interface setup
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
+4. Test thoroughly
 5. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the Apache 2.0 License. See `LICENSE` for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 🆘 Support
 
-- [Qwen2.5-VL](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct) by Alibaba Cloud
-- [mychen76/invoices-and-receipts_ocr_v1](https://huggingface.co/datasets/mychen76/invoices-and-receipts_ocr_v1) dataset
-- [HuggingFace Transformers](https://github.com/huggingface/transformers)
-- [PEFT](https://github.com/huggingface/peft) for LoRA implementation
+For issues and questions:
+1. Check the documentation in `docs/`
+2. Try the quickstart scripts
+3. Create an issue on GitHub
 
-## 📞 Support
+---
 
-- Create an [Issue](https://github.com/your-username/qwen25-vl-invoice-ocr/issues) for bug reports
-- Check [Discussions](https://github.com/your-username/qwen25-vl-invoice-ocr/discussions) for questions
-- Review [Wiki](https://github.com/your-username/qwen25-vl-invoice-ocr/wiki) for detailed guides 
+**Built with ❤️ for industrial applications** 

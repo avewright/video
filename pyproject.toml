@@ -1,0 +1,229 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nameplate-detector"
+version = "1.0.0"
+description = "A real-time video streaming application for industrial nameplate detection"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+maintainers = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+keywords = [
+    "computer vision",
+    "object detection",
+    "industrial automation",
+    "nameplate detection",
+    "real-time processing",
+    "video streaming",
+    "machine learning",
+    "deep learning",
+    "PyTorch",
+    "OpenCV",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "torch>=1.9.0",
+    "torchvision>=0.10.0",
+    "opencv-python>=4.5.0",
+    "pillow>=8.0.0",
+    "numpy>=1.20.0",
+    "fastapi>=0.68.0",
+    "uvicorn>=0.15.0",
+    "python-multipart>=0.0.5",
+    "requests>=2.25.0",
+    "python-socketio>=5.0.0",
+    "transformers>=4.20.0",
+    "accelerate>=0.20.0",
+    "pydantic>=1.8.0",
+]
+dynamic = ["version"]
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/nameplate-detector"
+"Bug Reports" = "https://github.com/yourusername/nameplate-detector/issues"
+"Source" = "https://github.com/yourusername/nameplate-detector"
+"Documentation" = "https://nameplate-detector.readthedocs.io/"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0.0",
+    "pytest-cov>=2.12.0",
+    "pytest-asyncio>=0.18.0",
+    "black>=21.0.0",
+    "flake8>=3.9.0",
+    "isort>=5.9.0",
+    "mypy>=0.910",
+    "pre-commit>=2.15.0",
+    "mkdocs>=1.2.0",
+    "mkdocs-material>=7.2.0",
+    "mkdocstrings>=0.16.0",
+]
+test = [
+    "pytest>=6.0.0",
+    "pytest-cov>=2.12.0",
+    "pytest-asyncio>=0.18.0",
+]
+docs = [
+    "mkdocs>=1.2.0",
+    "mkdocs-material>=7.2.0",
+    "mkdocstrings>=0.16.0",
+]
+gpu = [
+    "torch>=1.9.0+cu111",
+    "torchvision>=0.10.0+cu111",
+]
+
+[project.scripts]
+nameplate-detector = "nameplate_detector.cli:main"
+nameplate-api = "nameplate_detector.api.server:main"
+nameplate-predict = "scripts.predict_nameplate:main"
+nameplate-quickstart = "scripts.quickstart_camera:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+nameplate_detector = ["config/*.yaml", "config/*.json"]
+
+# Black configuration
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+# isort configuration
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["nameplate_detector"]
+known_third_party = ["torch", "torchvision", "cv2", "PIL", "numpy", "fastapi"]
+
+# MyPy configuration
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "cv2.*",
+    "torch.*",
+    "torchvision.*",
+    "transformers.*",
+    "accelerate.*",
+]
+ignore_missing_imports = true
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=nameplate_detector",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "--cov-fail-under=80",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "gpu: marks tests that require GPU",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["nameplate_detector"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+# Flake8 configuration
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "docs/source/conf.py",
+    "old",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+    "env",
+] 
